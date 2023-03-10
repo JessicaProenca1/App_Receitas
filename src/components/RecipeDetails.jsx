@@ -14,7 +14,7 @@ import blackHeartIcon from '../images/blackHeartIcon.svg';
 export default function RecipeDetails() {
   const { pathname } = useLocation();
   const history = useHistory();
-  const { mealAPI, drinkAPI } = useContext(RecipesContext);
+  const { API } = useContext(RecipesContext);
   const { id } = useParams();
   const meals = `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${id}`;
   const drink = `https://www.thecocktaildb.com/api/json/v1/1/lookup.php?i=${id}`;
@@ -45,9 +45,9 @@ export default function RecipeDetails() {
 
   useEffect(() => {
     const sixRecomended = 6;
-    setRecomendedDrink(drinkAPI?.slice(0, sixRecomended));
-    setRecomendedMeal(mealAPI?.slice(0, sixRecomended));
-  }, [mealAPI, drinkAPI]);
+    setRecomendedDrink(API?.slice(0, sixRecomended));
+    setRecomendedMeal(API?.slice(0, sixRecomended));
+  }, [API]);
 
   const responsive = {
     superLargeDesktop: {

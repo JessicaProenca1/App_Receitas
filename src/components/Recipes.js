@@ -1,49 +1,56 @@
-import React, { useContext } from 'react';
-import { useRouteMatch, useHistory } from 'react-router-dom';
+import React, { useContext, useEffect } from 'react';
+import { useHistory, useLocation } from 'react-router-dom';
 import RecipesContext from '../Context/RecipesContext';
 import ButtonFilter from './ButtonFilter';
+import APIDrink from '../APIFetch/fetchDrink';
+import APIMeal from '../APIFetch/fetchMeal';
 
 function Recipes() {
-  const mealsRoute = useRouteMatch('/meals');
+  const { pathname } = useLocation();
   const history = useHistory();
-  const { mealAPI,
-    drinkAPI,
+  const {
     isloading,
+    API,
     buttonFilter,
-    mealAPIFilter,
-    drinkAPIFilter,
-    isloadingFilter } = useContext(RecipesContext);
+    setAPI,
+    setIsloading,
+  } = useContext(RecipesContext);
   const maxMealPerPage = 12;
 
-  const handleClick = (type, id) => {
+  useEffect(() => {
+    const getMeals = async () => {
+      const response = await APIMeal('search.php?s=', '');
+      setAPI(response);
+      setIsloading(false);
+    };
+    const getDrinks = async () => {
+      const response = await APIDrink('search.php?s=', '');
+      setAPI(response);
+      setIsloading(false);
+    };
+    if (pathname.includes('/meals') && buttonFilter === '') {
+      getMeals();
+    } if (pathname.includes('/drinks') && buttonFilter === '') {
+      getDrinks();
+    }
+  }, [buttonFilter, pathname, setAPI, setIsloading]);
+
+  const handleClick = (id) => {
+    const type = pathname.includes('/meals') ? 'meals' : 'drinks';
     history.push(`/${type}/${id}`);
-  };
-
-  const filterMainMeal = () => {
-    if (buttonFilter !== '' && !isloadingFilter) {
-      return mealAPIFilter;
-    }
-    return mealAPI;
-  };
-
-  const filterMainDrink = () => {
-    if (buttonFilter !== '' && !isloadingFilter) {
-      return drinkAPIFilter;
-    }
-    return drinkAPI;
   };
 
   const mealCard = (
     <div>
       <ButtonFilter />
-      {filterMainMeal()
+      {API
         .slice(0, maxMealPerPage)
         .map(({ strMeal, idMeal, strMealThumb }, index) => (
           <div
             key={ index }
             data-testid={ `${index}-recipe-card` }
             aria-hidden="true"
-            onClick={ () => handleClick('meals', idMeal) }
+            onClick={ () => handleClick(idMeal) }
           >
             <h3 data-testid={ `${index}-card-name` }>{strMeal}</h3>
             <img
@@ -60,14 +67,14 @@ function Recipes() {
   const drinkCard = (
     <div>
       <ButtonFilter />
-      {filterMainDrink()
+      {API
         .slice(0, maxMealPerPage)
         .map(({ strDrink, idDrink, strDrinkThumb }, index) => (
           <div
             key={ index }
             data-testid={ `${index}-recipe-card` }
             aria-hidden="true"
-            onClick={ () => handleClick('drinks', idDrink) }
+            onClick={ () => handleClick(idDrink) }
           >
             <h3 data-testid={ `${index}-card-name` }>{strDrink}</h3>
             <img
@@ -85,7 +92,7 @@ function Recipes() {
   const drinksAppearing = (<div>{ !isloading ? drinkCard : <p>carregando</p> }</div>);
 
   return (
-    <div>{mealsRoute ? mealsAppearing : drinksAppearing}</div>
+    <div>{pathname.includes('/meals') ? mealsAppearing : drinksAppearing}</div>
   );
 }
 
