@@ -128,6 +128,27 @@ export default function RecipeDetails() {
     },
   };
 
+  const inProgressRecipes = {
+    meals: {
+      52771: [],
+    },
+    drinks: {
+      178319: [],
+    },
+  };
+  localStorage.setItem('inProgressRecipes', JSON.stringify(inProgressRecipes));
+
+  const inProgress = (type) => {
+    const recipe = JSON.parse(localStorage.getItem('inProgressRecipes'));
+    if (type === 'meals' && Object.keys(recipe.meals).includes(id)) {
+      return 'Continue Recipe';
+    }
+    if (type === 'drinks' && Object.keys(recipe.drinks).includes(id)) {
+      return 'Continue Recipe';
+    }
+    return 'Start Recipe';
+  };
+
   const food = rota ? details.strMeal : details.strDrink;
   const foodThumb = rota ? details.strMealThumb : details.strDrinkThumb;
   const foodCatOrAlco = rota ? details.strCategory : details.strAlcoholic;
@@ -213,7 +234,7 @@ export default function RecipeDetails() {
         style={ { position: 'fixed', bottom: '0px' } }
         data-testid="start-recipe-btn"
       >
-        Start Recipe
+        {inProgress(pathname.includes('meals') ? 'meals' : 'drinks')}
       </button>
     </div>
   );
