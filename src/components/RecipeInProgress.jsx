@@ -11,13 +11,31 @@ import styles from '../styles/RecipeInProgress.module.css';
 
 export default function RecipeDetails() {
   const { pathname } = useLocation();
+  const rota = pathname.includes('/meals');
   const { id } = useParams();
   const history = useHistory();
   const [ingredientes, setIngredientes] = useState([]);
   const [quantidades, setQuantidades] = useState([]);
   const [renderIngredientes, setrenderIngredientes] = useState([]);
   const [copy, setCopy] = useState(false);
-  const [isChecked, setIsChecked] = useState([]);
+  const antigos = JSON.parse(localStorage.getItem('inProgressRecipes'));
+  const [isChecked, setIsChecked] = useState(() => {
+    if (antigos === null) {
+      return [];
+    }
+    if (rota) {
+      if (!antigos.meals) {
+        return [];
+      }
+      return [...antigos.meals[id]];
+    }
+    if (!rota) {
+      if (!antigos.drinks) {
+        return [];
+      }
+      return [...antigos.drinks[id]];
+    }
+  });
 
   const {
     isloading,
@@ -63,12 +81,12 @@ export default function RecipeDetails() {
       setAPI(response[0]);
       setIsloading(false);
     };
-    if (pathname.includes('/meals')) {
+    if (rota) {
       getMealsFilter();
-    } if ((pathname.includes('/drinks'))) {
+    } if (!rota) {
       getDrinksFilter();
     }
-  }, [API, id, pathname, setAPI, setIsloading]);
+  }, [API, id, rota, setAPI, setIsloading]);
 
   useEffect(() => {
     const receita = () => {
@@ -78,8 +96,25 @@ export default function RecipeDetails() {
     receita();
   }, [ingredientes, quantidades]);
 
+  useEffect(() => {
+    const local = { ...antigos };
+    if (rota) {
+      const novos = {
+        ...local,
+        meals: { ...local.meals, [id]: isChecked },
+      };
+      localStorage.setItem('inProgressRecipes', JSON.stringify(novos));
+    } else {
+      const novos = {
+        ...local,
+        drinks: { ...local.drinks, [id]: isChecked },
+      };
+      localStorage.setItem('inProgressRecipes', JSON.stringify(novos));
+    }
+  }, [antigos, id, isChecked, rota]);
+
   const share = (urlID) => {
-    clipboardCopy(`http://localhost:3000/${urlID}${id}/in-progress`);
+    clipboardCopy(`http://localhost:3000/${urlID}/${id}/in-progress`);
     setCopy(true);
   };
 
@@ -87,7 +122,6 @@ export default function RecipeDetails() {
     history.push('/done-recipes');
   };
 
-  // const jamarcados = JSON.parse(localStorage.getItem('inProgressRecipes'));
   const handleChecked = useCallback((name) => {
     if (isChecked.includes(name)) {
       const removeCheck = isChecked.filter((element) => element !== name);
@@ -97,11 +131,10 @@ export default function RecipeDetails() {
     }
   }, [isChecked]);
 
-  const food = pathname.includes('/meals') ? API.strMeal : API.strDrink;
-  const foodThumb = pathname.includes('/meals') ? API.strMealThumb : API.strDrinkThumb;
-  const foodCatOrAlco = pathname.includes('/meals') ? API.strCategory : API.strAlcoholic;
-  const foodInstructions = pathname
-    .includes('/meals') ? API.strInstructions : API.strInstructions;
+  const food = rota ? API.strMeal : API.strDrink;
+  const foodThumb = rota ? API.strMealThumb : API.strDrinkThumb;
+  const foodCatOrAlco = rota ? API.strCategory : API.strAlcoholic;
+  const foodInstructions = rota ? API.strInstructions : API.strInstructions;
 
   return (
     <div>
@@ -123,7 +156,7 @@ export default function RecipeDetails() {
         alt="compartilhar"
         aria-hidden="true"
         data-testid="share-btn"
-        onClick={ () => share(pathname.includes('meals') ? 'meals/' : 'drinks/') }
+        onClick={ () => share(rota ? 'meals' : 'drinks') }
       />
       <img
         src={ whiteHeartIcon }
@@ -155,6 +188,7 @@ export default function RecipeDetails() {
       <p data-testid="instructions">{ foodInstructions }</p>
       <button
         type="submit"
+        // disabled={ isChecked.every(renderIngredientes) }
         onClick={ handleSubmit }
         style={ { position: 'fixed', bottom: '0px' } }
         data-testid="finish-recipe-btn"

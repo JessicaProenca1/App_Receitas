@@ -45,8 +45,8 @@ export default function RecipeDetails() {
 
   useEffect(() => {
     const sixRecomended = 6;
-    setRecomendedDrink(API?.slice(0, sixRecomended));
-    setRecomendedMeal(API?.slice(0, sixRecomended));
+    setRecomendedDrink(API.slice(0, sixRecomended));
+    setRecomendedMeal(API.slice(0, sixRecomended));
   }, [API]);
 
   const responsive = {
