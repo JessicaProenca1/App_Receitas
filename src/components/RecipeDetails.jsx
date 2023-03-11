@@ -1,53 +1,113 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { useHistory, useLocation, useParams } from 'react-router-dom';
-import Carousel from 'react-multi-carousel';
-import 'react-multi-carousel/lib/styles.css';
 import clipboardCopy from 'clipboard-copy';
-import useFetch from '../hooks/useFetch';
-// import useObjectReduce from '../hooks/useObjectReduce';
+import Carousel from 'react-multi-carousel';
 import RecipesContext from '../Context/RecipesContext';
-import '../styles/recipeDetails.css';
+import APIDrink from '../APIFetch/fetchDrink';
+import APIMeal from '../APIFetch/fetchMeal';
 import shareIcon from '../images/shareIcon.svg';
 import whiteHeartIcon from '../images/whiteHeartIcon.svg';
 import blackHeartIcon from '../images/blackHeartIcon.svg';
+import filterIngredientes from '../hooks/filterIngredientes';
+import 'react-multi-carousel/lib/styles.css';
 
 export default function RecipeDetails() {
   const { pathname } = useLocation();
-  const history = useHistory();
-  const { API } = useContext(RecipesContext);
+  const rota = pathname.includes('/meals');
   const { id } = useParams();
-  const meals = `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${id}`;
-  const drink = `https://www.thecocktaildb.com/api/json/v1/1/lookup.php?i=${id}`;
-  const url = (pathname.includes('meals')) ? meals : drink;
+  const history = useHistory();
+  const [details, setDetails] = useState([]);
+  const [ingredientes, setIngredientes] = useState([]);
+  const [quantidades, setQuantidades] = useState([]);
+  const [renderIngredientes, setrenderIngredientes] = useState([]);
   const [copy, setCopy] = useState(false);
-
-  const [specificFood, setSpecificFood] = useState({});
-  const [specificRenderFood, setspecificRenderFood] = useState([]);
-  const [recomendedMeal, setRecomendedMeal] = useState([]);
-  const [recomendedDrink, setRecomendedDrink] = useState([]);
   const [heartImg, setHeartImg] = useState(whiteHeartIcon);
-  const ingredient = useObjectReduce(specificFood, 'Ingredient');
-  const measure = useObjectReduce(specificFood, 'strMeasure');
-  const { fetchFood, loading } = useFetch(setspecificRenderFood, setSpecificFood, url);
-  const whatRecomended = pathname.includes('meals') ? recomendedDrink : recomendedMeal;
+  const favorite = JSON.parse(localStorage.getItem('favoriteRecipes'));
+  const [favoritesState, setFavoritesState] = useState(() => {
+    if (favorite !== null) {
+      return [...favorite];
+    }
+    return [];
+  });
+
+  const {
+    isloading,
+    setIsloading,
+    API,
+    setAPI,
+  } = useContext(RecipesContext);
 
   useEffect(() => {
-    fetchFood();
-    setspecificRenderFood([specificFood]);
-    const favorite = JSON.parse(localStorage.getItem('favoriteRecipes'));
-    if (favorite?.some((fav) => fav.id === id)) setHeartImg(blackHeartIcon);
+    const getMeals = async () => {
+      const response = await APIMeal('search.php?s=', '');
+      setAPI(response);
+      setIsloading(false);
+    };
+    const getDrinks = async () => {
+      const response = await APIDrink('search.php?s=', '');
+      setAPI(response);
+      setIsloading(false);
+    };
+    const getMealsFilter = async () => {
+      const response = await APIMeal('lookup.php?i=', id);
+      setDetails(response[0]);
+      setIsloading(false);
+    };
+    const getDrinksFilter = async () => {
+      const response = await APIDrink('lookup.php?i=', id);
+      setDetails(response[0]);
+      setIsloading(false);
+    };
+    if (rota) {
+      getMealsFilter();
+      getDrinks();
+    } if (!rota) {
+      getDrinksFilter();
+      getMeals();
+    }
+    if (favoritesState.some((fav) => fav.id === id)) {
+      setHeartImg(blackHeartIcon);
+    }
   }, []);
 
   useEffect(() => {
-    ingredient.filterObjectKeys();
-    measure.filterObjectKeys();
-  }, [specificFood]);
+    setIngredientes(filterIngredientes(details, 'Ingredient'));
+    setQuantidades(filterIngredientes(details, 'strMeasure'));
+  }, [details]);
 
   useEffect(() => {
-    const sixRecomended = 6;
-    setRecomendedDrink(API.slice(0, sixRecomended));
-    setRecomendedMeal(API.slice(0, sixRecomended));
-  }, [API]);
+    const receita = () => {
+      const itens = quantidades.map((item, index) => `${item} ${ingredientes[index]}`);
+      setrenderIngredientes(itens);
+    };
+    receita();
+  }, [ingredientes, quantidades]);
+
+  const share = (urlID) => {
+    clipboardCopy(`http://localhost:3000/${urlID}/${id}`);
+    setCopy(true);
+  };
+
+  const DoneRecipe = () => {
+    if (rota) {
+      history.push(`/meals/${id}/in-progress`);
+    } else history.push(`/drinks/${id}/in-progress`);
+  };
+
+  const favoriteRecipe = (obj) => {
+    if (favoritesState.some((fav) => fav.name === obj.name)) {
+      const rmvFav = favoritesState.filter((e) => Object.values(e)[0] !== obj.id);
+      setFavoritesState(rmvFav);
+      setHeartImg(whiteHeartIcon);
+    } else {
+      setFavoritesState([...favoritesState, obj]);
+      setHeartImg(blackHeartIcon);
+    }
+  };
+
+  useEffect(() => {
+    localStorage.setItem('favoriteRecipes', JSON.stringify(favoritesState));
+  }, [favoritesState]);
 
   const responsive = {
     superLargeDesktop: {
@@ -68,125 +128,90 @@ export default function RecipeDetails() {
     },
   };
 
-  const share = (urlID) => {
-    clipboardCopy(`http://localhost:3000/${urlID}${id}`);
-    setCopy(true);
-  };
-
-  function handleClick() {
-    if (pathname.includes('meals')) {
-      history.push(`/meals/${id}/in-progress`);
-    } else history.push(`/drinks/${id}/in-progress`);
-  }
-
-  const favoriteRecipe = (e, obj) => {
-    const oldFavorites = JSON.parse(localStorage.getItem('favoriteRecipes'));
-    let newFavorites = [];
-    if (oldFavorites) {
-      newFavorites = [...oldFavorites];
-    }
-    newFavorites.push(obj);
-    localStorage.setItem('favoriteRecipes', JSON.stringify(newFavorites));
-    if (e.target.src.includes('blackHeart')) {
-      const filteredFav = newFavorites?.filter((fav) => fav.id !== id);
-      localStorage.setItem('favoriteRecipes', JSON.stringify(filteredFav));
-      setHeartImg(whiteHeartIcon);
-    } else setHeartImg(blackHeartIcon);
-  };
+  const food = rota ? details.strMeal : details.strDrink;
+  const foodThumb = rota ? details.strMealThumb : details.strDrinkThumb;
+  const foodCatOrAlco = rota ? details.strCategory : details.strAlcoholic;
+  const foodArea = rota ? details.strArea : '';
+  const foodAlcool = rota ? '' : details.strAlcoholic;
+  const maxCarrossel = 6;
 
   return (
     <div>
-      {loading && <div>Loading...</div>}
-      { specificRenderFood?.map((food, idx) => (
-        <div key={ idx }>
-          <p data-testid="recipe-title">{ food.strMeal || food.strDrink }</p>
-          <h3
-            data-testid="recipe-category"
-          >
-            { pathname.includes('meals') ? food.strCategory : food.strAlcoholic }
-          </h3>
-          <img
-            src={ food.strMealThumb || food.strDrinkThumb }
-            alt={ food.strMeal }
-            data-testid="recipe-photo"
-            style={ { maxWidth: 200 } }
-          />
-          <img
-            src={ shareIcon }
-            alt="share"
-            aria-hidden="true"
-            data-testid="share-btn"
-            onClick={ () => share(pathname.includes('meals') ? 'meals/' : 'drinks/') }
-          />
-          {copy && <p>Link copied!</p>}
-          <img
-            src={ heartImg }
-            aria-hidden="true"
-            alt="favorite"
-            data-testid="favorite-btn"
-            onClick={ (e) => {
-              const mealFavorite = {
-                id: food.idMeal,
-                name: food.strMeal,
-                type: 'meal',
-                nationality: food.strArea,
-                category: food.strCategory,
-                alcoholicOrNot: '',
-                image: food.strMealThumb,
-              };
-              const drinkFavorite = {
-                id: food.idDrink,
-                name: food.strDrink,
-                type: 'drink',
-                nationality: '',
-                category: food.strCategory,
-                alcoholicOrNot: food.strAlcoholic,
-                image: food.strDrinkThumb,
-              };
-              favoriteRecipe(
-                e,
-                pathname.includes('meals') ? mealFavorite : drinkFavorite,
-              );
-            } }
-          />
-          {measure.results?.map((qntt, index) => (
-            <p
-              key={ index }
-              data-testid={ `${index}-ingredient-name-and-measure` }
-            >
-              { `${qntt} ${ingredient.results[index]}` }
-            </p>
-          ))}
-          <p data-testid="instructions">{ food.strInstructions }</p>
-          { !food.strYoutube ? '' : (
-            <iframe
-              data-testid="video"
-              title="video"
-              width="450"
-              height="315"
-              src={ food.strYoutube.replace('watch?v=', 'embed/') }
-            />
-          )}
+      {isloading && <div>Loading...</div>}
+      <h2 data-testid="recipe-title">{ food }</h2>
+      <img
+        src={ foodThumb }
+        alt={ food }
+        data-testid="recipe-photo"
+        style={ { maxWidth: 200 } }
+      />
+      <h3
+        data-testid="recipe-category"
+      >
+        { foodCatOrAlco }
+      </h3>
+      <img
+        src={ shareIcon }
+        alt="compartilhar"
+        aria-hidden="true"
+        data-testid="share-btn"
+        onClick={ () => share(rota ? 'meals' : 'drinks') }
+      />
+      <img
+        src={ heartImg }
+        aria-hidden="true"
+        alt="favorite"
+        data-testid="favorite-btn"
+        onClick={ () => {
+          const favoriteFood = {
+            id,
+            name: food,
+            type: rota ? 'meal' : 'drink',
+            nationality: foodArea,
+            category: details.strCategory,
+            alcoholicOrNot: foodAlcool,
+            image: foodThumb,
+          };
+          favoriteRecipe(favoriteFood);
+        } }
+      />
+      {copy && <p>Link copied!</p>}
+      {renderIngredientes.map((item, index) => (
+        <div key={ index }>
+          <p data-testid={ `${index}-ingredient-name-and-measure` }>
+            { item }
+          </p>
         </div>
       ))}
+      <p data-testid="instructions">{ details.strInstructions }</p>
+      { !details.strYoutube ? '' : (
+        <iframe
+          data-testid="video"
+          title="video"
+          width="450"
+          height="315"
+          src={ details.strYoutube.replace('watch?v=', 'embed/') }
+        />
+      )}
       <Carousel responsive={ responsive } slidesToSlide={ 2 }>
-        {whatRecomended?.map((food, index) => (
+        {API.slice(0, maxCarrossel).map((foods, index) => (
           <div key={ index } data-testid={ `${index}-recommendation-card` }>
             <p data-testid={ `${index}-recommendation-title` }>
-              { food.strMeal || food.strDrink }
+              { foods.strMeal || foods.strDrink }
             </p>
             <img
-              src={ food.strMealThumb || food.strDrinkThumb }
-              alt={ food.strMeal || food.strDrink }
+              src={ foods.strMealThumb || foods.strDrinkThumb }
+              alt={ foods.strMeal || foods.strDrink }
               style={ { maxWidth: 200 } }
             />
           </div>
         ))}
       </Carousel>
       <button
+        type="submit"
+        onClick={ DoneRecipe }
+        style={ { position: 'fixed', bottom: '0px' } }
         data-testid="start-recipe-btn"
-        className="btn-start"
-        onClick={ handleClick }
       >
         Start Recipe
       </button>
