@@ -6,7 +6,7 @@ import APIDrink from '../APIFetch/fetchDrink';
 import APIMeal from '../APIFetch/fetchMeal';
 import shareIcon from '../images/shareIcon.svg';
 import whiteHeartIcon from '../images/whiteHeartIcon.svg';
-// import blackHeartIcon from '../images/blackHeartIcon.svg';
+import blackHeartIcon from '../images/blackHeartIcon.svg';
 import styles from '../styles/RecipeInProgress.module.css';
 
 export default function RecipeDetails() {
@@ -18,6 +18,8 @@ export default function RecipeDetails() {
   const [quantidades, setQuantidades] = useState([]);
   const [renderIngredientes, setrenderIngredientes] = useState([]);
   const [copy, setCopy] = useState(false);
+  const [heartImg, setHeartImg] = useState(whiteHeartIcon);
+  const favorite = JSON.parse(localStorage.getItem('favoriteRecipes'));
   const antigos = JSON.parse(localStorage.getItem('inProgressRecipes'));
   const [isChecked, setIsChecked] = useState(() => {
     if (antigos === null) {
@@ -114,12 +116,19 @@ export default function RecipeDetails() {
   }, [antigos, id, isChecked, rota]);
 
   const share = (urlID) => {
-    clipboardCopy(`http://localhost:3000/${urlID}/${id}/in-progress`);
+    clipboardCopy(`http://localhost:3000/${urlID}/${id}`);
     setCopy(true);
   };
 
-  const handleSubmit = () => {
+  const DoneRecipe = (done) => {
     history.push('/done-recipes');
+    const oldDone = JSON.parse(localStorage.getItem('doneRecipes'));
+    let newDone = [];
+    if (oldDone) {
+      newDone = [...oldDone];
+    }
+    newDone.push(done);
+    localStorage.setItem('doneRecipes', JSON.stringify(newDone));
   };
 
   const handleChecked = useCallback((name) => {
@@ -131,11 +140,28 @@ export default function RecipeDetails() {
     }
   }, [isChecked]);
 
+  const favoriteRecipe = (obj) => {
+    const oldFavorites = JSON.parse(localStorage.getItem('favoriteRecipes'));
+    // const desfavoritar = oldFavorites.some((element) => element.id !== id);
+    let newFavorites = [];
+    if (oldFavorites) {
+      newFavorites = [...oldFavorites];
+    }
+    newFavorites.push(obj);
+    localStorage.setItem('favoriteRecipes', JSON.stringify(newFavorites));
+  };
+
+  const dataHoje = () => {
+    const timeElapsed = Date.now();
+    const today = new Date(timeElapsed);
+    return today.toLocaleDateString();
+  };
+
   const food = rota ? API.strMeal : API.strDrink;
   const foodThumb = rota ? API.strMealThumb : API.strDrinkThumb;
   const foodCatOrAlco = rota ? API.strCategory : API.strAlcoholic;
-  const foodInstructions = rota ? API.strInstructions : API.strInstructions;
-
+  const foodArea = rota ? API.strArea : '';
+  const foodAlcool = rota ? '' : API.strAlcoholic;
   return (
     <div>
       {isloading && <div>Loading...</div>}
@@ -159,11 +185,27 @@ export default function RecipeDetails() {
         onClick={ () => share(rota ? 'meals' : 'drinks') }
       />
       <img
-        src={ whiteHeartIcon }
+        src={ heartImg }
+        aria-hidden="true"
         alt="favorite"
         data-testid="favorite-btn"
-        onClick={ () => history.push('/favorite-recipes') }
-        aria-hidden="true"
+        onClick={ () => {
+          const favoriteFood = {
+            id,
+            name: food,
+            type: rota ? 'meal' : 'drink',
+            nationality: foodArea,
+            category: API.strCategory,
+            alcoholicOrNot: foodAlcool,
+            image: foodThumb,
+          };
+          favoriteRecipe(favoriteFood);
+          setHeartImg(() => {
+            if (!favorite || favorite.id === id) {
+              return whiteHeartIcon;
+            } return blackHeartIcon;
+          });
+        } }
       />
       {copy && <p>Link copied!</p>}
       {renderIngredientes.map((item, index) => (
@@ -185,11 +227,24 @@ export default function RecipeDetails() {
           </label>
         </div>
       ))}
-      <p data-testid="instructions">{ foodInstructions }</p>
+      <p data-testid="instructions">{ API.strInstructions }</p>
       <button
         type="submit"
-        // disabled={ isChecked.every(renderIngredientes) }
-        onClick={ handleSubmit }
+        disabled={ !renderIngredientes.every((item) => isChecked.includes(item)) }
+        onClick={ () => {
+          const DoneFood = {
+            id,
+            name: food,
+            type: rota ? 'meal' : 'drink',
+            nationality: foodArea,
+            category: API.strCategory,
+            alcoholicOrNot: foodAlcool,
+            image: foodThumb,
+            doneDate: dataHoje(),
+            tags: [API.strTags],
+          };
+          DoneRecipe(DoneFood);
+        } }
         style={ { position: 'fixed', bottom: '0px' } }
         data-testid="finish-recipe-btn"
       >
