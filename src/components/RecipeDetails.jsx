@@ -4,7 +4,7 @@ import Carousel from 'react-multi-carousel';
 import 'react-multi-carousel/lib/styles.css';
 import clipboardCopy from 'clipboard-copy';
 import useFetch from '../hooks/useFetch';
-import useObjectReduce from '../hooks/useObjectReduce';
+// import useObjectReduce from '../hooks/useObjectReduce';
 import RecipesContext from '../Context/RecipesContext';
 import '../styles/recipeDetails.css';
 import shareIcon from '../images/shareIcon.svg';

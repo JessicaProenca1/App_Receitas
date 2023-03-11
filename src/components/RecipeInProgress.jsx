@@ -8,6 +8,7 @@ import shareIcon from '../images/shareIcon.svg';
 import whiteHeartIcon from '../images/whiteHeartIcon.svg';
 import blackHeartIcon from '../images/blackHeartIcon.svg';
 import styles from '../styles/RecipeInProgress.module.css';
+import filterIngredientes from '../hooks/filterIngredientes';
 
 export default function RecipeDetails() {
   const { pathname } = useLocation();
@@ -53,32 +54,6 @@ export default function RecipeDetails() {
   } = useContext(RecipesContext);
 
   useEffect(() => {
-    const ingredient = (objectToReduce, string) => {
-      const newObject = Object.keys(objectToReduce)
-        .filter((key) => key.includes(string))
-        .reduce((cur, key) => Object.assign(cur, { [key]: objectToReduce[key] }), {});
-      const filteredObject = Object
-        .fromEntries(Object.entries(newObject).filter(([key, value]) => (
-          value !== null && value !== key && value !== ' ' && value !== '')));
-      setIngredientes(Object.values(filteredObject));
-    };
-    ingredient(API, 'Ingredient');
-  }, [API]);
-
-  useEffect(() => {
-    const mensure = (objectToReduce, string) => {
-      const newObject = Object.keys(objectToReduce)
-        .filter((key) => key.includes(string))
-        .reduce((cur, key) => Object.assign(cur, { [key]: objectToReduce[key] }), {});
-      const filteredObject = Object
-        .fromEntries(Object.entries(newObject).filter(([key, value]) => (
-          value !== null && value !== key && value !== ' ' && value !== '')));
-      setQuantidades(Object.values(filteredObject));
-    };
-    mensure(API, 'strMeasure');
-  }, [API]);
-
-  useEffect(() => {
     const getMealsFilter = async () => {
       const response = await APIMeal('lookup.php?i=', id);
       setAPI(response[0]);
@@ -98,6 +73,11 @@ export default function RecipeDetails() {
       setHeartImg(blackHeartIcon);
     }
   }, []);
+
+  useEffect(() => {
+    setIngredientes(filterIngredientes(API, 'Ingredient'));
+    setQuantidades(filterIngredientes(API, 'strMeasure'));
+  }, [API]);
 
   useEffect(() => {
     const receita = () => {
@@ -151,8 +131,8 @@ export default function RecipeDetails() {
 
   const favoriteRecipe = (obj) => {
     if (favoritesState.some((fav) => fav.name === obj.name)) {
-      const removeFavorites = favoritesState.filter((element) => Object.values(element)[0] !== obj.id);
-      setFavoritesState(removeFavorites);
+      const rmvFav = favoritesState.filter((e) => Object.values(e)[0] !== obj.id);
+      setFavoritesState(rmvFav);
       setHeartImg(whiteHeartIcon);
     } else {
       setFavoritesState([...favoritesState, obj]);
