@@ -20,6 +20,12 @@ export default function RecipeDetails() {
   const [copy, setCopy] = useState(false);
   const [heartImg, setHeartImg] = useState(whiteHeartIcon);
   const favorite = JSON.parse(localStorage.getItem('favoriteRecipes'));
+  const [favoritesState, setFavoritesState] = useState(() => {
+    if (favorite !== null) {
+      return [...favorite];
+    }
+    return [];
+  });
   const antigos = JSON.parse(localStorage.getItem('inProgressRecipes'));
   const [isChecked, setIsChecked] = useState(() => {
     if (antigos === null) {
@@ -88,7 +94,10 @@ export default function RecipeDetails() {
     } if (!rota) {
       getDrinksFilter();
     }
-  }, [API, id, rota, setAPI, setIsloading]);
+    if (favoritesState.some((fav) => fav.id === id)) {
+      setHeartImg(blackHeartIcon);
+    }
+  }, []);
 
   useEffect(() => {
     const receita = () => {
@@ -141,20 +150,30 @@ export default function RecipeDetails() {
   }, [isChecked]);
 
   const favoriteRecipe = (obj) => {
-    const oldFavorites = JSON.parse(localStorage.getItem('favoriteRecipes'));
-    // const desfavoritar = oldFavorites.some((element) => element.id !== id);
-    let newFavorites = [];
-    if (oldFavorites) {
-      newFavorites = [...oldFavorites];
+    if (favoritesState.some((fav) => fav.name === obj.name)) {
+      const removeFavorites = favoritesState.filter((element) => Object.values(element)[0] !== obj.id);
+      setFavoritesState(removeFavorites);
+      setHeartImg(whiteHeartIcon);
+    } else {
+      setFavoritesState([...favoritesState, obj]);
+      setHeartImg(blackHeartIcon);
     }
-    newFavorites.push(obj);
-    localStorage.setItem('favoriteRecipes', JSON.stringify(newFavorites));
   };
 
+  useEffect(() => {
+    localStorage.setItem('favoriteRecipes', JSON.stringify(favoritesState));
+  }, [favoritesState]);
+
   const dataHoje = () => {
-    const timeElapsed = Date.now();
-    const today = new Date(timeElapsed);
-    return today.toLocaleDateString();
+    const today = new Date();
+    return today.toISOString();
+  };
+
+  const tags = () => {
+    if (API.strTags) {
+      return API.strTags.split(',');
+    }
+    return [];
   };
 
   const food = rota ? API.strMeal : API.strDrink;
@@ -162,6 +181,7 @@ export default function RecipeDetails() {
   const foodCatOrAlco = rota ? API.strCategory : API.strAlcoholic;
   const foodArea = rota ? API.strArea : '';
   const foodAlcool = rota ? '' : API.strAlcoholic;
+
   return (
     <div>
       {isloading && <div>Loading...</div>}
@@ -200,11 +220,6 @@ export default function RecipeDetails() {
             image: foodThumb,
           };
           favoriteRecipe(favoriteFood);
-          setHeartImg(() => {
-            if (!favorite || favorite.id === id) {
-              return whiteHeartIcon;
-            } return blackHeartIcon;
-          });
         } }
       />
       {copy && <p>Link copied!</p>}
@@ -241,7 +256,7 @@ export default function RecipeDetails() {
             alcoholicOrNot: foodAlcool,
             image: foodThumb,
             doneDate: dataHoje(),
-            tags: [API.strTags],
+            tags: tags(),
           };
           DoneRecipe(DoneFood);
         } }
