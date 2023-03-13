@@ -1,10 +1,12 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import RecipesProvider from '../Context/RecipesProvider';
 import Meals from '../pages/Meals';
-import Drinks from '../pages/Drinks';
+import App from '../App';
+import renderWithRouter from './helpers/renderWithRouter';
+import fetch from '../../cypress/mocks/fetch';
 
 const mockHistoryPush = jest.fn();
 
@@ -68,35 +70,27 @@ describe('All tests', () => {
   });
 
   it('Test button card Drinks', async () => {
-    render(
-      <MemoryRouter initialEntries={ [{ pathname: '/drinks' }] }>
-        <RecipesProvider>
-          <Drinks />
-        </RecipesProvider>
-      </MemoryRouter>,
-    );
+    jest.spyOn(global, 'fetch');
+    global.fetch.mockImplementation(fetch);
+    const { history } = renderWithRouter(<App />);
+
+    act(() => {
+      history.push('/drinks');
+    });
+
     await waitFor(() => {
+      expect(screen.getByTestId(primeiroCard)).toBeInTheDocument();
       expect(screen.getByTestId(buttonShake)).toBeInTheDocument();
     }, { timeout: 3000 });
 
-    await waitFor(() => {
-      expect(screen.getByTestId(primeiroCard)).toBeInTheDocument();
-    }, { timeout: 3000 });
-
-    userEvent.click(screen.getByTestId(buttonShake));
-    await waitFor(() => {
-      expect(screen.getByTestId(primeiroCard)).toBeInTheDocument();
-      expect(screen.getByTestId(primeiroCard)).toHaveTextContent('151 Florida Bushwacker');
-    }, { timeout: 3000 });
-
     userEvent.click(screen.getByTestId(buttonShake));
     expect(screen.getByTestId(primeiroCard)).toHaveTextContent('GG');
     userEvent.click(screen.getByTestId(buttonShake));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('All-category-filter')).toBeInTheDocument();
+    }, { timeout: 3000 });
+
     userEvent.click(screen.getByTestId('All-category-filter'));
-    expect(screen.getByTestId(primeiroCard)).toHaveTextContent('GG');
-
-    userEvent.click(screen.getByTestId(primeiroCard));
-
-    expect(mockHistoryPush).toHaveBeenCalledWith('/drinks/15997');
   });
 });

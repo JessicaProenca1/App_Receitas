@@ -1,9 +1,10 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import RecipesProvider from '../Context/RecipesProvider';
-import DoneRecipes from '../pages/DoneRecipes';
+import App from '../App';
+import fetch from '../../cypress/mocks/fetch';
+import renderWithRouter from './helpers/renderWithRouter';
+import { doneRecipes } from './helpers/doneMock';
 
 const mockedWriteText = jest.fn();
 
@@ -24,41 +25,58 @@ const PATHNAME = '/done-recipes';
 const NAME = '0-horizontal-name';
 
 describe('All tests', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: jest.fn(() => null),
+        setItem: jest.fn(() => null),
+      },
+      writable: true,
+    });
+  });
+
   it('Test done recipes', async () => {
-    render(
-      <MemoryRouter initialEntries={ [{ pathname: PATHNAME }] }>
-        <RecipesProvider>
-          <DoneRecipes />
-        </RecipesProvider>
-      </MemoryRouter>,
-    );
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: jest.fn(() => null),
+        setItem: jest.fn(() => null),
+      },
+      writable: true,
+    });
+    jest.spyOn(global, 'fetch');
+    global.fetch.mockImplementation(fetch);
+    const { history } = renderWithRouter(<App />);
+
+    jest.spyOn(window.localStorage, 'getItem').mockImplementation(() => JSON.stringify(doneRecipes));
+
+    act(() => {
+      history.push(PATHNAME);
+    });
 
     const recipe = screen.getByTestId(NAME);
     expect(recipe).toBeInTheDocument();
-  });
-
-  it('Test share button', async () => {
-    render(
-      <MemoryRouter initialEntries={ [{ pathname: PATHNAME }] }>
-        <RecipesProvider>
-          <DoneRecipes />
-        </RecipesProvider>
-      </MemoryRouter>,
-    );
-
     const share = screen.getByTestId('0-horizontal-share-btn');
     userEvent.click(share);
     expect(mockedWriteText).toHaveBeenCalledTimes(1);
   });
 
   it('Test link image', async () => {
-    render(
-      <MemoryRouter initialEntries={ [{ pathname: PATHNAME }] }>
-        <RecipesProvider>
-          <DoneRecipes />
-        </RecipesProvider>
-      </MemoryRouter>,
-    );
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: jest.fn(() => null),
+        setItem: jest.fn(() => null),
+      },
+      writable: true,
+    });
+    jest.spyOn(global, 'fetch');
+    global.fetch.mockImplementation(fetch);
+    const { history } = renderWithRouter(<App />);
+
+    jest.spyOn(window.localStorage, 'getItem').mockImplementation(() => JSON.stringify(doneRecipes));
+
+    act(() => {
+      history.push(PATHNAME);
+    });
 
     userEvent.click(screen.getByTestId('0-horizontal-card'));
 
@@ -66,13 +84,22 @@ describe('All tests', () => {
   });
 
   it('Test button filter', async () => {
-    render(
-      <MemoryRouter initialEntries={ [{ pathname: PATHNAME }] }>
-        <RecipesProvider>
-          <DoneRecipes />
-        </RecipesProvider>
-      </MemoryRouter>,
-    );
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: jest.fn(() => null),
+        setItem: jest.fn(() => null),
+      },
+      writable: true,
+    });
+    jest.spyOn(global, 'fetch');
+    global.fetch.mockImplementation(fetch);
+    const { history } = renderWithRouter(<App />);
+
+    jest.spyOn(window.localStorage, 'getItem').mockImplementation(() => JSON.stringify(doneRecipes));
+
+    act(() => {
+      history.push(PATHNAME);
+    });
 
     userEvent.click(screen.getByTestId('filter-by-meal-btn'));
     expect(screen.getByTestId(NAME)).toHaveTextContent('Spicy Arrabiata Penne');
