@@ -128,15 +128,15 @@ export default function RecipeDetails() {
     },
   };
 
-  const inProgressRecipes = {
-    meals: {
-      52771: [],
-    },
-    drinks: {
-      178319: [],
-    },
-  };
-  localStorage.setItem('inProgressRecipes', JSON.stringify(inProgressRecipes));
+  // const inProgressRecipes = {
+  //   meals: {
+  //     52771: [],
+  //   },
+  //   drinks: {
+  //     178319: [],
+  //   },
+  // };
+  // localStorage.setItem('inProgressRecipes', JSON.stringify(inProgressRecipes));
 
   const inProgress = (type) => {
     const recipe = JSON.parse(localStorage.getItem('inProgressRecipes'));
